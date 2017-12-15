@@ -56,7 +56,7 @@ model.N1 <- makeBayouModel(dat ~ LnMass, rjpars = c("theta"),
 model.NN <- makeBayouModel(dat ~ LnMass, rjpars = c("theta", "LnMass"),  
                            tree=tree, dat=dat, pred=pred, SE=MEvar, prior=prior.NN, D=DNN, slopechange="alphaweighted")
 
-gens <- 10000000
+gens <- 1000000
 ## Make MCMC objects:
 mcmc.11 <- bayou.makeMCMC(tree, dat, pred=pred, SE=MEvar, model=model.11$model, prior=prior.11, samp = 100, startpar=model.11$startpar, new.dir="../output/LnMass/", outname="model11_r001", plot.freq=NULL)
 mcmc.11$run(gens/5)
@@ -88,11 +88,11 @@ saveRDS(mcmc.NN, file="../output/LnMass/mcmc.NN.r001.rds")
 library(foreach)
 library(doParallel)
 ncores <- 8
-nsteps <- 20
-ngens <- 400000
+nsteps <- 32
+ngens <- 500000
 registerDoParallel(cores=ncores)
 Bk <- qbeta(seq(0,1, length.out=nsteps), 0.3,1)
-ss.11 <- mcmc.11$steppingstone(ngens, chain.11, Bk, burnin=0.3, plot=FALSE, )
+ss.11 <- mcmc.11$steppingstone(ngens/5, chain.11, Bk, burnin=0.3, plot=FALSE)
 saveRDS(ss.11, file="../output/LnMass/ss.11.r001.rds")
 
 ss.N1 <- mcmc.N1$steppingstone(ngens, chain.N1, Bk, burnin=0.3, plot=FALSE)
@@ -106,6 +106,12 @@ ss.N1
 ss.NN
 
 
+shiftsum.N1 <- shiftSummaries(chain.N1, mcmc.N1, pp.cutoff=0.5)
+shiftsum.NN <- shiftSummaries(chain.NN, mcmc.NN, pp.cutoff=0.5)
+pdf("../output/shiftsumN1.pdf")
+plotShiftSummaries(shiftsum.N1, pal=viridis::viridis)
+dev.off()
 
-
-
+pdf("../output/shiftsumNN.pdf")
+plotShiftSummaries(shiftsum.NN, pal=viridis::viridis)
+dev.off()

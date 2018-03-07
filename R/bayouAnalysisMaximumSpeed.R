@@ -48,59 +48,81 @@ DN1 = list(alpha=1, sig2=1, beta_LnMass=0.1, k=1, theta=2, slide=1)
 DNN = list(alpha=1, sig2=1, beta_LnMass=0.6, k=c(1,1), theta=3, slide=1)
 
 MEvar <- 0.05
-
-model.11 <- makeBayouModel(dat ~ LnMass, rjpars = c(), 
-                           tree=tree, dat=dat, pred=pred, SE=MEvar, prior=prior.11, D=D11, slopechange="alphaweighted")
-model.N1 <- makeBayouModel(dat ~ LnMass, rjpars = c("theta"),  
-                           tree=tree, dat=dat, pred=pred, SE=MEvar, prior=prior.N1, D=DN1, slopechange="alphaweighted")
-model.NN <- makeBayouModel(dat ~ LnMass, rjpars = c("theta", "LnMass"),  
-                           tree=tree, dat=dat, pred=pred, SE=MEvar, prior=prior.NN, D=DNN, slopechange="alphaweighted")
-
-gens <- 50000
+gens <- 1000000
 ## Make MCMC objects:
-mcmc.11 <- bayou.makeMCMC(tree, dat, pred=pred, SE=MEvar, model=model.11$model, prior=prior.11, samp = 100, startpar=model.11$startpar, new.dir="../output/LnMass/", outname="model11_r001", plot.freq=NULL)
-mcmc.11$run(gens/5)
-chain.11 <- set.burnin(mcmc.11$load(), 0.3)
-saveRDS(chain.11, file="../output/LnMass/chain.11.r001.rds")
-saveRDS(mcmc.11, file="../output/LnMass/mcmc.11.r001.rds")
 
-endpar.11 <- pull.pars(length(chain.11$gen), chain.11, model=model.11$model)
-startpar.N1 <- model.N1$startpar
-startpar.N1$theta[1] <- endpar.11$theta
-startpar.N1$beta_LnMass <- endpar.11$beta_LnMass
+runmodel <- function(i, gens=1000000){
+  if(i==1){
+  model.11 <- makeBayouModel(dat ~ LnMass, rjpars = c(), 
+                               tree=tree, dat=dat, pred=pred, SE=MEvar, prior=prior.11, D=D11, slopechange="alphaweighted")
+  name.11 <- paste0("model11_lnorm_r", paste0(sample(0:9,4,replace=TRUE), collapse=""))
+  mcmc.11 <- bayou.makeMCMC(tree, dat, pred=pred, SE=MEvar, model=model.11$model, prior=prior.11, samp = 100, startpar=model.11$startpar, new.dir="../output/LnMass/", outname=name.11, plot.freq=NULL)
+  mcmc.11$run(gens)
+  chain.11 <- set.burnin(mcmc.11$load(), 0.3)
+  saveRDS(chain.11, file=paste("../output/LnMass/chain.", name.11, ".rds", sep=""))
+  saveRDS(mcmc.11, file=paste("../output/LnMass/mcmc.", name.11, ".rds", sep=""))
+  return(list(mcmc.11, chain.11, name.11))
+  }
 
-#mcmc.N1 <- bayou.makeMCMC(tree, dat, pred=pred, SE=MEvar, model=model.N1$model, prior=prior.N1, samp = 100, startpar=startpar.N1, new.dir="../output/LnMass/", outname="modelN1_r001", plot.freq=NULL)
-mcmc.N1 <- readRDS("../output/LnMass/mcmc.N1.r001.rds")
-#mcmc.N1$run(gens)
-chain.N1 <- set.burnin(mcmc.N1$load(), 0.3)
-saveRDS(chain.N1, file="../output/LnMass/chain.N1.r001.rds")
-saveRDS(mcmc.N1, file="../output/LnMass/mcmc.N1.r001.rds")
+  #endpar.11 <<- pull.pars(length(chain.11$gen), chain.11, model=model.11$model)
+  #startpar.N1 <<- model.N1$startpar
+  #startpar.N1$theta[1] <- endpar.11$theta
+  #startpar.N1$beta_LnMass <- endpar.11$beta_LnMass
+  if(i==2){
+  model.N1 <- makeBayouModel(dat ~ LnMass, rjpars = c("theta"),  
+                               tree=tree, dat=dat, pred=pred, SE=MEvar, prior=prior.N1, D=DN1, slopechange="alphaweighted")
+  name.N1 <- paste0("modelN1_lnorm_r", paste0(sample(0:9,4,replace=TRUE), collapse=""))
+  mcmc.N1 <- bayou.makeMCMC(tree, dat, pred=pred, SE=MEvar, model=model.N1$model, prior=prior.N1, samp = 100, startpar=model.N1$startpar, new.dir="../output/LnMass/", outname=name.N1, plot.freq=NULL)
+  #mcmc.N1 <- readRDS("../output/LnMass/mcmc.N1.r001.rds")
+  mcmc.N1$run(gens)
+  chain.N1 <- set.burnin(mcmc.N1$load(), 0.3)
+  saveRDS(chain.N1, file=paste("../output/LnMass/chain.", name.N1, ".rds", sep=""))
+  saveRDS(mcmc.N1, file=paste("../output/LnMass/mcmc.", name.N1, ".rds", sep=""))
+  return(list(mcmc.N1, chain.N1, name.N1))
+  }
 
-endpar.N1 <- pull.pars(length(chain.N1$gen), chain.N1, model=model.N1$model)
-startpar.NN <- endpar.N1
-startpar.NN$beta_LnMass <- rep(startpar.NN$beta_LnMass, startpar.NN$ntheta)
-
-mcmc.NN <- bayou.makeMCMC(tree, dat, pred=pred, SE=MEvar, model=model.NN$model, prior=prior.NN, samp = 100, startpar=startpar.NN, new.dir="../output/LnMass/", outname="modelNN_lnorm_r004", plot.freq=500)
-mcmc.NN$run(gens)
-chain.NN <- set.burnin(mcmc.NN$load(), 0.3)
-saveRDS(chain.NN, file="../output/LnMass/chain.NN.r001.rds")
-saveRDS(mcmc.NN, file="../output/LnMass/mcmc.NN.r001.rds")
+#endpar.N1 <- pull.pars(length(chain.N1$gen), chain.N1, model=model.N1$model)
+#startpar.NN <- endpar.N1
+#startpar.NN$beta_LnMass <- rep(startpar.NN$beta_LnMass, startpar.NN$ntheta)
+  if(i==3){
+  model.NN <- makeBayouModel(dat ~ LnMass, rjpars = c("theta", "LnMass"),  
+                               tree=tree, dat=dat, pred=pred, SE=MEvar, prior=prior.NN, D=DNN, slopechange="alphaweighted")
+  name.NN <- paste0("modelNN_lnorm_r", paste0(sample(0:9,4,replace=TRUE), collapse=""))
+  mcmc.NN <- bayou.makeMCMC(tree, dat, pred=pred, SE=MEvar, model=model.NN$model, prior=prior.NN, samp = 100, startpar=model.NN$startpar, new.dir="../output/LnMass/", outname=name.NN, plot.freq=NULL)
+  mcmc.NN$run(gens)
+  chain.NN <- set.burnin(mcmc.NN$load(), 0.3)
+  saveRDS(chain.NN, file=paste("../output/LnMass/chain.", name.NN, ".rds", sep=""))
+  saveRDS(mcmc.NN, file=paste("../output/LnMass/mcmc.", name.NN, ".rds", sep=""))
+  return(list(mcmc.NN, chain.NN, name.NN))
+  }
+}
 
 library(foreach)
 library(doParallel)
-ncores <- 8
-nsteps <- 32
-ngens <- 500000
+ncores <- 50
+nsteps <- 50
 registerDoParallel(cores=ncores)
+res <- foreach(i=c(1,2,2,2,2,3,3,3,3)) %dopar% runmodel(i, gens=1000000)
+
+mcmc.11 <- res[[1]][[1]]
+mcmc.N1 <- res[[2]][[1]]
+mcmc.NN <- res[[6]][[1]]
+
+chain.11 <- res[[1]][[2]]
+chain.N1 <- combine.chains(lapply(2:5, function(x) res[[x]][[2]]), burnin.prop=0.3)
+chain.NN <- combine.chains(lapply(6:9, function(x) res[[x]][[2]]), burnin.prop=0.3)
+
+ngens <- 500000
 Bk <- qbeta(seq(0,1, length.out=nsteps), 0.3,1)
-ss.11 <- mcmc.11$steppingstone(ngens/5, chain.11, Bk, burnin=0.3, plot=FALSE)
-saveRDS(ss.11, file="../output/LnMass/ss.11.r001.rds")
 
-ss.N1 <- mcmc.N1$steppingstone(ngens, chain.N1, Bk, burnin=0.3, plot=FALSE)
-saveRDS(ss.N1, file="../output/LnMass/ss.N1.r001.rds")
+ss.11 <- mcmc.11$steppingstone(ngens, chain.11, Bk, burnin=0.3, plot=FALSE)
+saveRDS(ss.11, file="../output/LnMass/ss.11.r005.rds")
 
-ss.NN <- mcmc.NN$steppingstone(ngens, chain.NN, Bk, burnin=0.3, plot=FALSE)
-saveRDS(ss.NN, file="../output/LnMass/ss.NN.r001.rds")
+ss.N1 <- mcmc.N1$steppingstone(ngens, chain.N1, Bk, burnin=0, plot=FALSE)
+saveRDS(ss.N1, file="../output/LnMass/ss.N1.r005.rds")
+
+ss.NN <- mcmc.NN$steppingstone(ngens, chain.NN, Bk, burnin=0, plot=FALSE)
+saveRDS(ss.NN, file="../output/LnMass/ss.NN.r005.rds")
 
 ss.11
 ss.N1

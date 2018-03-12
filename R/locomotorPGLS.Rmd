@@ -1,6 +1,7 @@
 ---
 title: "PGLS locomtor performance"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
 ---
@@ -12,6 +13,7 @@ library(phylolm)
 library(treeplyr)
 library(foreach)
 library(doParallel)
+library(phytools)
 registerDoParallel(cores=50)
 tds <- readRDS("../output/fullTreeTreeDataObjects.rds")
 tds[[1]]
@@ -20,13 +22,14 @@ tds[[1]]
 *Single variable fits w/Brownian Motion*
   
 ```{r}
-par(mfrow=c(3,2))
 singlefits <- foreach(i=1:length(tds)) %do% {
   td <- filter(tds[[i]], !is.na(TempTraitValue), !is.na(LnMass))
   td$dat <- mutate(td$dat, "LnTempTraitValue"=log(TempTraitValue))
   LnTempTraitValue <- td$dat[['LnTempTraitValue']]
   LnMass <- td$dat[['LnMass']]
-  plot(LnMass, LnTempTraitValue)
+  vizdat <- cbind(LnMass, LnTempTraitValue)
+  rownames(vizdat) <- td$phy$tip.label
+  fancyTree(td$phy, type="scattergram", X = as.matrix(vizdat), fsize=0.3)
   phylolm(LnTempTraitValue~LnMass, phy=td$phy, model="BM")
   
 }
@@ -338,6 +341,118 @@ curve(coef[1]+coef[2]*x+coef[3]*x^2+coef[5], add=TRUE, lty=2, col=3)
 
 ```
 
+## Phylogenetic versions of regressions featured in the manuscript (currently)
+
+# Figure 1
+```{r}
+#A) Exploratory Speed (Routine speed?)
+td <- tds[[6]]
+td <- filter(td, !is.na(LnMass), !is.na(TempTraitValue))
+M <- td[['LnMass']]
+y <- log(td[['TempTraitValue']])
+lmF1A <- phylolm(y~M, phy=td$phy, model="OUrandomRoot")
+summary(lmF1A)
+print(paste("N=", length(y)))
+```
+
+```{r}
+#B) Maximum Speed
+td <- tds[[3]]
+td <- filter(td, !is.na(LnMass), !is.na(TempTraitValue))
+M <- td[['LnMass']]
+y <- log(td[['TempTraitValue']])
+lmF1B <- phylolm(y~M, phy=td$phy, model="OUrandomRoot")
+summary(lmF1B)
+print(paste("N=", length(y)))
+```
+
+```{r}
+#C) Acceleration
+td <- tds[[2]]
+td <- filter(td, !is.na(LnMass), !is.na(TempTraitValue))
+M <- td[['LnMass']]
+y <- log(td[['TempTraitValue']])
+lmF1C <- phylolm(y~M, phy=td$phy, model="OUrandomRoot")
+summary(lmF1C)
+print(paste("N=", length(y)))
+```
+
+```{r}
+#D) Min Turn Radius
+td <- tds[[4]]
+td <- filter(td, !is.na(LnMass), !is.na(TempTraitValue))
+M <- td[['LnMass']]
+y <- log(td[['TempTraitValue']])
+lmF1D <- phylolm(y~M, phy=td$phy, model="BM")
+summary(lmF1D)
+print(paste("N=", length(y)))
+```
+
+```{r}
+#E) Angular Speed
+td <- tds[[1]]
+td <- filter(td, !is.na(LnMass), !is.na(TempTraitValue))
+M <- td[['LnMass']]
+y <- log(td[['TempTraitValue']])
+lmF1E <- phylolm(y~M, phy=td$phy, model="OUrandomRoot")
+summary(lmF1E)
+print(paste("N=", length(y)))
+```
 
 
+## Figure 2
+
+```{r}
+#A) Routine Speed
+td <- tds[[6]]
+td <- filter(td, !is.na(LnMass), !is.na(TempTraitValue), !is.na(Environment)) %>% mutate(., LnTTV = log(TempTraitValue)) %>% select(., LnMass, LnTTV, Environment) %>% group_by(., Environment) 
+
+sumTableA <- summarise(td, Int=phylolm(LnTTV~LnMass, phy=phy, model="OUrandomRoot")$coef[1], Slope=phylolm(LnTTV~LnMass, phy=phy, model="OUrandomRoot")$coef[2], N=length(LnMass), 
+                      p.slope=round(summary(phylolm(LnTTV~LnMass, phy=phy, model="OUrandomRoot"))$coefficients[1,4],10))
+sumTableA
+```
+
+```{r}
+#B) Maximum Speed
+td <- tds[[3]]
+td <- filter(td, !is.na(LnMass), !is.na(TempTraitValue), !is.na(Environment)) %>% mutate(., LnTTV = log(TempTraitValue)) %>% select(., LnMass, LnTTV, Environment) %>% group_by(., Environment) 
+model <- "OUrandomRoot"
+sumTableB <- summarise(td, Int=phylolm(LnTTV~LnMass, phy=phy, model=model)$coef[1], Slope=phylolm(LnTTV~LnMass, phy=phy, model=model)$coef[2], N=length(LnMass), 
+                      p.slope=round(summary(phylolm(LnTTV~LnMass, phy=phy, model=model))$coefficients[1,4],10))
+sumTableB
+```
+
+```{r}
+#C) Acceleration
+td <- tds[[2]]
+td <- filter(td, !is.na(LnMass), !is.na(TempTraitValue), !is.na(Environment)) %>% mutate(., LnTTV = log(TempTraitValue)) %>% select(., LnMass, LnTTV, Environment) %>% group_by(., Environment) 
+model <- "OUrandomRoot"
+sumTableC <- summarise(td, Int=phylolm(LnTTV~LnMass, phy=phy, model=model)$coef[1], Slope=phylolm(LnTTV~LnMass, phy=phy, model=model)$coef[2], N=length(LnMass), 
+                      p.slope=round(summary(phylolm(LnTTV~LnMass, phy=phy, model=model))$coefficients[1,4],10))
+sumTableC
+
+```
+
+
+```{r}
+#D) Min Turning Radius
+td <- tds[[4]]
+td <- filter(td, !is.na(LnMass), !is.na(TempTraitValue), !is.na(Environment)) %>% mutate(., LnTTV = log(TempTraitValue)) %>% select(., LnMass, LnTTV, Environment)
+model <- "OUrandomRoot"
+sumTableD <- summarise(td, Int=phylolm(LnTTV~LnMass, phy=phy, model=model)$coef[1], Slope=phylolm(LnTTV~LnMass, phy=phy, model=model)$coef[2], N=length(LnMass), 
+                      p.slope=summary(phylolm(LnTTV~LnMass, phy=phy, model=model))$coefficients[1,4])
+rownames(sumTableD) <- "Water"
+sumTableD
+```
+
+```{r}
+#E) Angular Speed
+td <- tds[[1]]
+td <- filter(td, !is.na(LnMass), !is.na(TempTraitValue), !is.na(Environment)) %>% mutate(., LnTTV = log(TempTraitValue)) %>% select(., LnMass, LnTTV, Environment)
+model <- "OUrandomRoot"
+sumTableE <- summarise(td, Int=phylolm(LnTTV~LnMass, phy=phy, model=model)$coef[1], Slope=phylolm(LnTTV~LnMass, phy=phy, model=model)$coef[2], N=length(LnMass), 
+                      p.slope=summary(phylolm(LnTTV~LnMass, phy=phy, model=model))$coefficients[1,4])
+rownames(sumTableE) <- "Water"
+sumTableE
+```
 
